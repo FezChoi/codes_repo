@@ -10,13 +10,13 @@ function Hd = bandpassfilter
 % All frequency values are in Hz.
 Fs = 20;  % Sampling Frequency
 
-Fstop1 = 0.23333333333;  % First Stopband Frequency
-Fpass1 = 0.33333333333;  % First Passband Frequency
-Fpass2 = 0.61666666667;  % Second Passband Frequency
-Fstop2 = 0.66666666667;  % Second Stopband Frequency
-Astop1 = 60;             % First Stopband Attenuation (dB)
-Apass  = 1;              % Passband Ripple (dB)
-Astop2 = 80;             % Second Stopband Attenuation (dB)
+Fstop1 =   % First Stopband Frequency
+Fpass1 =   % First Passband Frequency
+Fpass2 =   % Second Passband Frequency
+Fstop2 =   % Second Stopband Frequency
+Astop1 =              % First Stopband Attenuation (dB)
+Apass  =              % Passband Ripple (dB)
+Astop2 =              % Second Stopband Attenuation (dB)
 match  = 'passband';     % Band to match exactly
 
 % Construct an FDESIGN object and call its BUTTER method.
