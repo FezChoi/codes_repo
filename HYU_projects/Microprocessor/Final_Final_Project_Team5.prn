@@ -1,0 +1,613 @@
+ FFFFFFFF           ;DEFINE DATANAME
+ FFC3           SEG1      EQU   0FFC3H 	;7 SEGMENT - RIGHT
+ FFC2           SEG2      EQU   0FFC2H	;MIDDILE
+ FFC1           SEG3      EQU   0FFC1H	;LEFT
+ FFC5           COLGREEN  EQU   0FFC5H	;DOT MATRIX
+ FFC6           COLRED    EQU   0FFC6H
+ FFC7           ROW       EQU   0FFC7H
+ FFF0           DATAOUT EQU   0FFF0H	;KEY INTERFACE
+ FFF1           DATAIN  EQU   0FFF1H
+ 0030           VSEG1   EQU   30H	;7 SEGMENT BUFFER
+ 0031           VSEG2   EQU   31H
+ 0032           VSEG3   EQU   32H
+ 0033           VCOLG   EQU   33H	;DOT MATRIX BUFFER
+ 0034           VROWG   EQU   34H
+ 0035           VCOLR   EQU   35H
+ 0036           VROWR   EQU   36H
+ 0037           BUFF    EQU   37H	;KEY BUFFER
+ 0038           TEMP1   EQU   38H	;GENERAL BUFFER
+ 0039           TEMP2   EQU   39H
+                
+ FFFFFFFF           ;DEFINE REGISTER
+ FFFFFFFF           ;R0 COLG
+ FFFFFFFF           ;R1 ROWG
+ FFFFFFFF           ;R2 DOTCOLG TEMP, COUNTER
+ FFFFFFFF           ;R3 TEMP
+ FFFFFFFF           ;R4 LENGTH
+ FFFFFFFF           ;R5 TIME_REPS
+ FFFFFFFF           ;R6 DELAY, TEMP
+ FFFFFFFF           ;R7 DELAY, TEMP
+                
+                
+ FFFFFFFF           ;THE SNAKE GAEM
+ FFFFFFFF           ;-------------------------------------------------------
+ FFFFFFFF           ; INITIALIZE
+ FFFFFFFF           ;-------------------------------------------------------
+ 8000              	ORG   	8000H
+                
+ 8000 75813C       	MOV   	SP, #60
+ 8003 D2BC            	SETB    PS
+ 8005           INITIAL:
+ 8005           INITSEG:
+ 8005 7400            	MOV   	A, #0
+ 8007 F532            	MOV     VSEG3, A
+ 8009 F531            	MOV     VSEG2, A
+ 800B F530            	MOV     VSEG1, A
+ 800D 90FFC3          	MOV     DPTR, #SEG1
+ 8010 F0              	MOVX    @DPTR, A   
+ 8011 90FFC2          	MOV     DPTR, #SEG2
+ 8014 F0              	MOVX    @DPTR, A   
+ 8015 90FFC1          	MOV     DPTR, #SEG3
+ 8018 F0              	MOVX    @DPTR, A      
+ 8019           INITVAR:
+ 8019 753702          	MOV    	BUFF, #02H
+ 801C 753301          	MOV     VCOLG, #1
+ 801F 753401          	MOV     VROWG, #1  
+ 8022 753502          	MOV     VCOLR, #2  
+ 8025 753601          	MOV     VROWR, #1
+ 8028 7850            	MOV     R0, #50H
+ 802A 7960            	MOV     R1, #60H
+ 802C 7601         	MOV   	@R0, #1
+ 802E 7701         	MOV   	@R1, #1
+ 8030 8633         	MOV   	VCOLG, @R0
+ 8032 8734         	MOV   	VROWG, @R1
+ 8034 7C01         	MOV   	R4, #1H
+ 8036 7D08         	MOV   	R5, #8
+ 8038           INITTIME:
+ 8038 758901       	MOV   	TMOD,#00000001B
+ 803B 43A882          	ORL     IE,#10000010B   
+ 803E 758C00          	MOV     TH0,#00H
+ 8041 758A00          	MOV     TL0,#00H
+ 8044 C3              	CLR     C
+ 8045 D28C            	SETB    TCON.TR0
+                
+ 8047           ;-------------------------------------------------------
+ 8047           ; MAIN ROUTINE
+ 8047           ;-------------------------------------------------------
+ 8047 AB8A      MAIN:   MOV     R3, TL0  
+ 8049 12823A       	CALL    DOTCOLR
+ 804C 12820B          	CALL    DOTCOLG
+ 804F 80F6            	JMP     MAIN
+                
+ 8051           ;-------------------------------------------------------
+ 8051           ; TIMER INTERRUPT ROUTINE
+ 8051           ;-------------------------------------------------------
+ 8051           SERVICE:
+ 8051 C28C            	CLR    	TCON.TR0
+ 8053 DD0E            	DJNZ    R5, ENDSERV
+ 8055 128066          	CALL    GETKEY
+ 8058 1280BE          	CALL 	DIRECTION
+ 805B 1280FB       	CALL   	EATEN
+ 805E 1281CA       	CALL   	COLLISION
+ 8061 7D08            	MOV     R5, #8
+ 8063           ENDSERV:
+ 8063 D28C            	SETB    TCON.TR0
+ 8065 32        RETI
+                
+ 8066           ;-------------------------------------------------------
+ 8066           ; READ KEY
+ 8066           ;-------------------------------------------------------
+ 8066           GETKEY:   
+ 8066 C0D0            	PUSH     PSW
+ 8068 D2D4            	SETB     PSW.4
+ 806A D2D3            	SETB     PSW.3
+ 806C 7D00      INIT:   MOV      R5, #00H
+ 806E 74EF            	MOV      A, #11101111B
+ 8070 D3              	SETB     C
+ 8071           COLSCAN:
+ 8071 FE              	MOV      R6,A
+ 8072 0D              	INC      R5
+ 8073 1280B5          	CALL     SUBKEY
+ 8076 B4FF07          	CJNE     A,#0FFH,RSCAN
+ 8079 EE              	MOV      A, R6
+ 807A D3              	SETB     C
+ 807B 13              	RRC      A
+ 807C 5034            	JNC      NOKEY
+ 807E 80F1            	JMP      COLSCAN
+ 8080 7E00      RSCAN:  MOV      R6,#00H
+ 8082           ROWSCAN:
+ 8082 13              	RRC      A
+ 8083 5003            	JNC      MATRIX
+ 8085 0E              	INC      R6
+ 8086 80FA            	JMP      ROWSCAN
+ 8088 EE        MATRIX: MOV      A, R6
+ 8089 75F005          	MOV      B, #05H
+ 808C A4              	MUL      AB
+ 808D 2D              	ADD      A, R5
+ 808E 1282B1          	CALL      INDEX
+ 8091 C3              	CLR      C
+                
+ 8092 FF           	MOV   	R7, A
+ 8093 9537         	SUBB   	A, BUFF
+ 8095 B40203       	CJNE   	A, #02H, JP1
+ 8098 02825A       	JMP   	GAMEOVER
+ 809B B40403    JP1:   	CJNE   	A, #04H, JP2
+ 809E 02825A       	JMP   	GAMEOVER
+ 80A1 F4        JP2:   	CPL   	A
+ 80A2 04           	INC   	A
+ 80A3 B40203       	CJNE   	A, #02H, JP3
+ 80A6 02825A       	JMP   	GAMEOVER
+ 80A9 B40403    JP3:   	CJNE   	A, #04H, JP4
+ 80AC 02825A       	JMP   	GAMEOVER
+ 80AF EF        JP4:   	MOV   	A, R7
+ 80B0 F537            	MOV     BUFF,A
+                
+ 80B2 D0D0      NOKEY:  POP     PSW
+ 80B4 22        RET         			;GETKEY 끝
+                
+ 80B5 90FFF0    SUBKEY: MOV     DPTR,#DATAOUT
+ 80B8 F0                MOVX   	@DPTR,A
+ 80B9 90FFF1            MOV    	DPTR,#DATAIN
+ 80BC E0                MOVX   	A,@DPTR
+ 80BD 22        RET
+                
+ 80BE           ;-------------------------------------------------------
+ 80BE           ; GET DIRECTION & NEW HEAD
+ 80BE           ;-------------------------------------------------------
+ 80BE           DIRECTION:
+ 80BE AF37            	MOV     R7, BUFF
+ 80C0 7850         	MOV   	R0, #50H
+ 80C2 7960         	MOV   	R1, #60H
+ 80C4 BF0008          	CJNE    R7,#00H,LP1
+ 80C7 E6           	MOV   	A, @R0
+ 80C8 14              	DEC     A
+ 80C9 B40025          	CJNE    A,#0,LP4
+ 80CC 12825A          	CALL    GAMEOVER
+ 80CF BF0108    LP1:    CJNE    R7,#01H,LP2
+ 80D2 E7           	MOV   	A, @R1
+ 80D3 04              	INC     A
+ 80D4 B4091F          	CJNE    A,#9,LP5
+ 80D7 12825A          	CALL    GAMEOVER
+ 80DA BF0208    LP2:    CJNE    R7,#02H,LP3
+ 80DD E6           	MOV   	A, @R0
+ 80DE 04              	INC     A
+ 80DF B4090F          	CJNE    A,#9,LP4
+ 80E2 12825A          	CALL    GAMEOVER
+ 80E5 BF0509    LP3:    CJNE    R7,#05H,LP4
+ 80E8 E7           	MOV   	A, @R1
+ 80E9 14              	DEC     A
+ 80EA B40009          	CJNE    A,#0,LP5
+ 80ED 12825A          	CALL    GAMEOVER
+ 80F0 22        RET
+                
+ 80F1 F533      LP4:   	MOV   	VCOLG, A
+ 80F3 8734         	MOV   	VROWG, @R1
+ 80F5 22        RET
+                
+ 80F6 8633      LP5:   	MOV   	VCOLG, @R0
+ 80F8 F534         	MOV   	VROWG, A   
+ 80FA 22        RET         
+                
+ 80FB           ;-------------------------------------------------------
+ 80FB           ; CHECK EATEN & UPDATE
+ 80FB           ;-------------------------------------------------------
+ 80FB E533      EATEN:  MOV     A, VCOLG
+ 80FD B53515          	CJNE    A,35H,EATX
+ 8100 E534            	MOV     A, VROWG
+ 8102 B53610          	CJNE    A,36H,EATX
+ 8105 7400            	MOV     A, #0
+ 8107 90FFC6          	MOV     DPTR, #COLRED
+ 810A F0              	MOVX    @DPTR, A
+ 810B 12826F          	CALL    SEGDIS
+ 810E 12817D       	CALL   	EATUPDATE
+ 8111 128119          	CALL  	RAND
+ 8114 22        RET
+ 8115 1281A1    EATX:   CALL   	EATXUPDATE
+ 8118 22        RET
+                
+ 8119           ;-------------------------------------------------------
+ 8119           ; GET RANDOM POSITION & CHECK
+ 8119           ;-------------------------------------------------------   
+ 8119           RAND:      
+ 8119 EB           	MOV   	A, R3
+ 811A 2411      RD:   	ADD   	A, #17
+ 811C 75F065       	MOV   	B, #101
+ 811F A4           	MUL   	AB
+ 8120 C3              	CLR     C 
+ 8121 FF           	MOV   	R7, A
+ 8122 75F040       	MOV     B, #64
+ 8125 84              	DIV     AB   
+ 8126 E5F0            	MOV     A, B
+ 8128 75F008          	MOV     B, #8
+ 812B 84              	DIV     AB
+ 812C 04              	INC     A
+                   
+ 812D F535            	MOV     VCOLR, A
+ 812F E5F0            	MOV     A, B
+ 8131 04              	INC     A   
+ 8132 F536            	MOV     VROWR, A   
+                
+ 8134           RANDCHECK:
+ 8134 8A38         	MOV   	TEMP1, R2
+ 8136           CHECK1:
+ 8136 7A00         	MOV   	R2, #00H
+ 8138 7450      AGA:   	MOV   	A, #50H
+ 813A 2A           	ADD   	A, R2
+ 813B F8           	MOV   	R0, A
+ 813C E6           	MOV   	A, @R0
+ 813D B53503       	CJNE   	A, 35H, RPT
+ 8140 02814D       	JMP   	CHECK2
+ 8143 0A        RPT:   	INC   	R2
+ 8144 EA           	MOV   	A, R2	
+ 8145 8CF0         	MOV   	B, R4
+ 8147 B5F0EE       	CJNE   	A, B, AGA
+ 814A AA38         	MOV   	R2, TEMP1
+ 814C 22        RET
+ 814D           CHECK2:
+ 814D 7A00         	MOV   	R2, #00H
+ 814F 7460      AGA2:   MOV   	A, #60H
+ 8151 2A           	ADD   	A, R2
+ 8152 F9           	MOV   	R1, A
+ 8153 E7           	MOV   	A, @R1
+ 8154 B53603       	CJNE   	A, 36H, RPT2
+ 8157 EF           	MOV   	A, R7
+ 8158 80C0         	JMP   	RD
+ 815A 0A        RPT2:   INC   	R2
+ 815B EA           	MOV   	A, R2
+ 815C 8CF0         	MOV   	B, R4
+ 815E B5F0EE       	CJNE   	A, B, AGA2
+ 8161 AA38         	MOV   	R2, TEMP1
+ 8163 22        RET
+                
+ 8164           ;-------------------------------------------------------
+ 8164           ; (DEBUG IN DETERMINISTIC ROUTINE)
+ 8164           ;-------------------------------------------------------
+ 8164           DETER:
+ 8164 E535         	MOV   	A, VCOLR
+ 8166 B4080C       	CJNE   	A, #08H, NOTYET
+ 8169 E536         	MOV   	A, VROWR
+ 816B B4080B       	CJNE   	A, #08H, NOTYET2
+ 816E 7401         	MOV   	A, #01H
+ 8170 F535         	MOV   	VCOLR, A
+ 8172 F536         	MOV   	VROWR, A
+ 8174 22        RET
+ 8175           NOTYET: 
+ 8175 04        	INC   	A
+ 8176 F535         	MOV   	VCOLR, A   
+ 8178 22        RET
+ 8179           NOTYET2:
+ 8179 04        	INC  	A
+ 817A F536         	MOV   	VROWR, A
+ 817C 22        RET
+                
+ 817D           ;-------------------------------------------------------
+ 817D           ; UPDATE ROUTINE
+ 817D           ;-------------------------------------------------------
+ 817D           ; UPDATE IF EATEN
+ 817D           ;-------------------------------------------------------
+ 817D           EATUPDATE:
+ 817D 8CF0         	MOV   	B, R4
+ 817F E5F0      LOOP1:  MOV   	A, B
+ 8181 14          	DEC   	A
+ 8182 2450         	ADD   	A, #50H
+ 8184 F8           	MOV   	R0, A
+ 8185 2410         	ADD   	A, #10H
+ 8187 F9           	MOV   	R1, A
+ 8188 8638         	MOV   	TEMP1, @R0
+ 818A 8739         	MOV   	TEMP2, @R1
+ 818C 08           	INC   	R0
+ 818D 09           	INC   	R1
+ 818E A638         	MOV   	@R0, TEMP1
+ 8190 A739         	MOV   	@R1, TEMP2
+ 8192 E5F0         	MOV   	A, B
+ 8194 14           	DEC   	A
+ 8195 F5F0         	MOV   	B, A
+ 8197 70E6         	JNZ   	LOOP1
+ 8199 0C           	INC   	R4
+                   
+ 819A 853350       	MOV   	50H, VCOLG
+ 819D 853460       	MOV   	60H, VROWG
+ 81A0 22        RET
+ 81A1           ;-------------------------------------------------------
+ 81A1           ; UPDATE IF NOT EATEN
+ 81A1           ;-------------------------------------------------------
+ 81A1           EATXUPDATE:
+ 81A1 8CF0         	MOV   	B, R4
+ 81A3 E5F0         	MOV   	A, B
+ 81A5 14           	DEC   	A
+ 81A6 601B         	JZ   	LOOP4
+                   
+ 81A8 E5F0      LOOP3:  MOV   	A, B
+ 81AA 14           	DEC   	A
+ 81AB 14           	DEC   	A
+ 81AC 2450         	ADD   	A, #50H
+ 81AE F8           	MOV   	R0, A
+ 81AF 2410         	ADD   	A, #10H
+ 81B1 F9           	MOV   	R1, A
+ 81B2 8638         	MOV   	TEMP1, @R0
+ 81B4 8739         	MOV   	TEMP2, @R1
+ 81B6 08           	INC   	R0
+ 81B7 09           	INC   	R1
+ 81B8 A638         	MOV   	@R0, TEMP1
+ 81BA A739         	MOV   	@R1, TEMP2
+ 81BC E5F0         	MOV   	A, B
+ 81BE 14           	DEC   	A
+ 81BF F5F0         	MOV   	B, A
+ 81C1 70E5         	JNZ   	LOOP3
+                
+ 81C3 853350    LOOP4:  MOV   	50H, VCOLG
+ 81C6 853460       	MOV   	60H, VROWG
+ 81C9 22        RET   
+                
+ 81CA           ;-------------------------------------------------------
+ 81CA           ; CHECK COLLISION
+ 81CA           ;-------------------------------------------------------
+ 81CA           COLLISION:
+ 81CA 8A39         	MOV   	TEMP2, R2
+ 81CC EC        	MOV   	A, R4     ;10
+ 81CD 14           	DEC   	A         ;9
+ 81CE 6038         	JZ   	NEXT2
+ 81D0 14           	DEC   	A         ;8
+ 81D1 6035         	JZ   	NEXT2
+ 81D3 14           	DEC   	A         ;7
+ 81D4 6032         	JZ   	NEXT2
+ 81D6 14           	DEC   	A      	  ;6
+ 81D7 602F         	JZ   	NEXT2
+ 81D9 F538         	MOV   	TEMP1, A  ;6
+                
+ 81DB           CHECKCOL:
+ 81DB 7A00         	MOV   	R2, #00H
+ 81DD 7454      AGAIN:  MOV   	A, #54H   ;54H
+ 81DF 2A           	ADD   	A, R2     ;54 ;55
+ 81E0 F8           	MOV   	R0, A   
+ 81E1 E6           	MOV   	A, @R0
+ 81E2 B55003       	CJNE   	A, 50H, REPT
+ 81E5 0281EE       	JMP   	CHECKROW
+ 81E8 0A        REPT:   INC   	R2        ;1 ;2 ;3 ;4 ;5 ;6
+ 81E9 EA           	MOV   	A, R2      
+ 81EA B538F0       	CJNE   	A, 38H, AGAIN
+ 81ED 22        RET
+                
+ 81EE           CHECKROW:
+ 81EE 7A00         	MOV   	R2, #00H 
+ 81F0 7464      AGAIN2: MOV   	A, #64H
+ 81F2 2A           	ADD   	A, R2
+ 81F3 F9           	MOV   	R1, A
+ 81F4 E7           	MOV   	A, @R1
+ 81F5 B5600B       	CJNE   	A, 60H, REPT2
+ 81F8 7454         	MOV    	A, #54H
+ 81FA 2A           	ADD    	A, R2
+ 81FB F8           	MOV    	R0,A
+ 81FC E6           	MOV    	A, @R0
+ 81FD B55008       	CJNE   	A,50H NEXT2   
+ 8200 02825A       	JMP   	GAMEOVER
+ 8203 0A        REPT2:  INC   	R2
+ 8204 EA           	MOV   	A, R2
+ 8205 B538E8       	CJNE   	A, 38H, AGAIN2
+                
+ 8208 AA39      NEXT2:	MOV   	R2, TEMP2
+ 820A 22        RET
+                
+                
+ 820B           ;-------------------------------------------------------
+ 820B           ; DOT MATRIX LED CONTROL
+ 820B           ;-------------------------------------------------------
+ 820B           ; GREEN LED FOR SNAKE
+ 820B           ;-------------------------------------------------------
+ 820B           DOTCOLG:
+ 820B 7A00      	MOV   	R2, #00H   
+ 820D           LOOP:
+ 820D 7400            	MOV     A, #0
+ 820F 90FFC6          	MOV     DPTR, #COLRED
+ 8212 F0              	MOVX    @DPTR, A
+ 8213 90FFC7       	MOV   	DPTR, #ROW
+ 8216 F0           	MOVX   	@DPTR, A
+                
+ 8217 7450         	MOV   	A, #50H
+ 8219 2A           	ADD   	A, R2
+ 821A F8           	MOV   	R0, A
+ 821B E6           	MOV     A, @R0
+ 821C 1282CB          	CALL    CINDEX
+ 821F 90FFC5          	MOV     DPTR, #COLGREEN
+ 8222 F0              	MOVX    @DPTR, A
+                
+ 8223 7460         	MOV   	A, #60H
+ 8225 2A           	ADD   	A, R2
+ 8226 F9           	MOV   	R1, A
+ 8227 E7              	MOV     A, @R1
+ 8228 1282D9          	CALL    RINDEX
+ 822B 90FFC7          	MOV     DPTR, #ROW
+ 822E F0              	MOVX    @DPTR, A
+                
+ 822F 0A           	INC   	R2
+ 8230 EA           	MOV   	A, R2
+ 8231 8CF0         	MOV   	B, R4
+ 8233 B5F0D7       	CJNE   	A, B, LOOP
+ 8236 900000     	MOV   	DPTR, #0
+ 8239 22        RET
+ 823A           ;-------------------------------------------------------
+ 823A           ; RED LED FOR PREY
+ 823A           ;-------------------------------------------------------
+ 823A           DOTCOLR:
+ 823A 7400            	MOV   	A, #0
+ 823C 90FFC5          	MOV   	DPTR, #COLGREEN
+ 823F F0              	MOVX   	@DPTR, A
+ 8240 90FFC7       	MOV   	DPTR, #ROW
+ 8243 F0           	MOVX   	@DPTR, A
+                
+ 8244 E535            	MOV   	A, VCOLR
+ 8246 1282CB          	CALL   	CINDEX
+ 8249 90FFC6          	MOV    	DPTR, #COLRED
+ 824C F0              	MOVX   	@DPTR, A
+ 824D E536            	MOV   	A, VROWR
+ 824F 1282D9          	CALL   	RINDEX
+ 8252 90FFC7          	MOV   	DPTR, #ROW
+ 8255 F0              	MOVX   	@DPTR, A
+ 8256 900000        	MOV   	DPTR, #0
+ 8259 22        RET 
+ 825A           ;-------------------------------------------------------
+ 825A           ; GAMEOVER DISPLAY
+ 825A           ;-------------------------------------------------------
+ 825A           GAMEOVER:
+ 825A 7400            	MOV    	A, #0
+ 825C 90FFC5          	MOV     DPTR, #COLGREEN
+ 825F F0              	MOVX    @DPTR, A
+ 8260 74FF            	MOV     A, #11111111B
+ 8262 90FFC6          	MOV     DPTR, #COLRED
+ 8265 F0              	MOVX    @DPTR, A
+ 8266 90FFC7          	MOV     DPTR, #ROW
+ 8269 F0              	MOVX    @DPTR, A
+ 826A C28C            	CLR     TCON.TR0
+ 826C 80FE         	JMP   	$
+ 826E           NOTOVER: 
+ 826E 22        RET
+                
+ 826F           ;-------------------------------------------------------
+ 826F           ; SCORE DISPLAY
+ 826F           ;-------------------------------------------------------
+ 826F           ; SEVEN SEGMENT LED DISPLAY
+ 826F           ;-------------------------------------------------------
+ 826F           SEGDIS:
+ 826F 8C32      	MOV   	VSEG3,R4
+ 8271 E532            	MOV    	A, VSEG3
+ 8273 D4              	DA      A
+ 8274 F532         	MOV   	VSEG3, A
+                
+                
+ 8276 90FFC1       	MOV   	DPTR, #SEG3
+ 8279 F0           	MOVX   	@DPTR, A
+ 827A EC           	MOV   	A, R4
+ 827B 900000       	MOV   	DPTR, #0
+ 827E B40026       	CJNE   	A, #00H, NEXT
+                   
+ 8281 E531            	MOV     A, VSEG2
+ 8283 2401            	ADD     A, #1H
+ 8285 D4              	DA      A
+ 8286 FF           	MOV   	R7, A
+ 8287 F531            	MOV     VSEG2, A
+ 8289 90FFC2          	MOV     DPTR, #SEG2
+ 828C F0              	MOVX    @DPTR, A   
+ 828D B40017          	CJNE    A,#00H,NEXT
+                   
+ 8290 E530            	MOV     A, VSEG1
+ 8292 2401            	ADD     A, #1H
+ 8294 D4              	DA      A
+ 8295 FF           	MOV   	R7, A
+ 8296 F530            	MOV     VSEG1, A
+ 8298 90FFC3          	MOV     DPTR, #SEG1
+ 829B F0              	MOVX    @DPTR, A   
+ 829C B40008          	CJNE    A,#00H,NEXT
+                   
+ 829F 7400            	MOV     A, #00H
+ 82A1 F532            	MOV     VSEG3, A
+ 82A3 F531            	MOV     VSEG2, A
+ 82A5 F530            	MOV     VSEG1, A
+ 82A7           NEXT:   
+ 82A7 22        RET
+                
+ 82A8           ;-------------------------------------------------------
+ 82A8           ; DELAY ROUTINE
+ 82A8           ;-------------------------------------------------------
+ 82A8 7FFF      DELAY:  MOV    	R7, #0FFH
+ 82AA 7EFF      DELAY1: MOV     R6, #0FFH
+ 82AC DEFE      DELAY2:	DJNZ    R6, DELAY2
+ 82AE DFFA            	DJNZ    R7, DELAY1
+ 82B0 22        RET
+                
+ 82B1           ;-------------------------------------------------------
+ 82B1           ; INDEX & DATABASE
+ 82B1           ;-------------------------------------------------------
+ 82B1           ; FUNCTION KEY INDEX
+ 82B1           ;-------------------------------------------------------
+ 0010           RWKEY   EQU 10H ;READ AND WRITE KEY
+ 0011           COMMA   EQU 11H ;INCRESE KEY(COMMA ,)
+ 0012           PERIOD  EQU 12H ;END KEY (PERIOD . )
+ 0013           GO      EQU 13H ;GO-KEY
+ 0014           REG     EQU 14H ;REGISTER KEY
+ 0015           CD      EQU 15H ;DECRESE KEY
+ 0016           INCR    EQU 16H ;CODE KEY
+ 0017           ST      EQU 17H ;SINGLE STEP KEY
+ 0018           RST     EQU 18H ;RST KEY
+                
+ 82B1 83        INDEX:  MOVC   A, @A+PC
+ 82B2 22        RET
+ 82B3           KEYBASE:
+ 82B3 17        	DB    	ST 
+ 82B4 16              	DB    	INCR
+ 82B5 15              	DB    	CD
+ 82B6 14              	DB    	REG
+ 82B7 13              	DB    	GO
+ 82B8 0C              	DB    	0CH
+ 82B9 0D              	DB    	0DH
+ 82BA 0E              	DB    	0EH
+ 82BB 0F              	DB    	0FH
+ 82BC 11              	DB    	COMMA
+ 82BD 08              	DB    	08H
+ 82BE 09              	DB    	09H
+ 82BF 0A              	DB    	0AH
+ 82C0 0B              	DB    	0BH
+ 82C1 12              	DB    	PERIOD
+ 82C2 04              	DB    	04H
+ 82C3 05              	DB    	05H ; 위
+ 82C4 06              	DB    	06H
+ 82C5 07              	DB    	07H
+ 82C6 10              	DB    	RWKEY
+ 82C7 00              	DB    	00H ; 왼쪽
+ 82C8 01              	DB    	01H ; 아래
+ 82C9 02              	DB    	02H ; 오른쪽
+ 82CA 03              	DB    	03H
+ 82CB           ;-------------------------------------------------------
+ 82CB           ; DOT MATRIX COLUMN LINE INDEX
+ 82CB           ;-------------------------------------------------------
+ 82CB 9082D0    CINDEX:	MOV   	DPTR,#CBASE
+ 82CE 93              	MOVC   	A, @A+DPTR
+ 82CF 22        RET
+ 82D0 00010204  CBASE:  DB   	00H,01H,02H,04H,08H,10H,20H,40H,80H
+ 82D9           ;-------------------------------------------------------
+ 82D9           ; DOT MATRIX ROW LINE INDEX
+ 82D9           ;-------------------------------------------------------
+ 82D9 9082DE    RINDEX: MOV   	DPTR,#RBASE
+ 82DC 93              	MOVC   	A, @A+DPTR
+ 82DD 22        RET
+ 82DE 00010204  RBASE:  DB   	00H,01H,02H,04H,08H,10H,20H,40H,80H
+ 82E7           ;-------------------------------------------------------
+ 82E7           ; SEVEN SEGMENT INDEX
+ 82E7           ;-------------------------------------------------------
+ 82E7 9082EC    SINDEX: MOV   	DPTR,#SBASE
+ 82EA 93              	MOVC   	A, @A+DPTR
+ 82EB 22        RET
+ 82EC 00        SBASE:  DB   	00000000B
+ 82ED 01           	DB   	00000001B ;1
+ 82EE 02           	DB   	00000010B
+ 82EF 03           	DB   	00000011B
+ 82F0 04           	DB   	00000100B
+ 82F1 05           	DB   	00000101B
+ 82F2 06           	DB   	00000110B
+ 82F3 07           	DB   	00000111B
+ 82F4 08           	DB   	00001000B
+ 82F5 09           	DB   	00001001B ;9
+ 82F6 10           	DB   	00010000B
+ 82F7 11           	DB   	00010001B
+ 82F8 12           	DB   	00010010B
+ 82F9 13           	DB   	00010011B
+ 82FA 14           	DB   	00010100B
+ 82FB 15           	DB   	00010101B
+ 82FC 16           	DB   	00010110B ;16
+                
+ 82FD           ;-------------------------------------------------------
+ 82FD           ; TIMER INTERRUPT OCCURANCE
+ 82FD           ;-------------------------------------------------------
+ 9F0B                 	ORG   	9F0BH
+ 9F0B 028051          	JMP     SERVICE
+                
+ 9F0E           ;-------------------------------------------------------
+ 9F0E           END
+
+ PUSAN NATIONAL UNIVERSITY  8051 CROSS-ASSEMBLER        VERSION 1.20
+
+                          Multiware & Image
+
+ SOURCE FILE NAME: D:\USERS\FEZCH\DESKTOP\FEZCHOI\자료\HANYANG UNIV\2학년 2학기\마이크로프로세서 - 최정욱\마프 실습\FINAL PROJECT - THE SNAKE GAME\FINAL_FINAL_PROJECT_TEAM5.ASM
+
+
+
