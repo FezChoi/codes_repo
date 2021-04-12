@@ -1,13 +1,13 @@
 %% test vital _angle distance
 
-para.freqslope =  40.8450012207031251e6*1e6;%49.209e6*1e6; % % MHz/us
-para.samplerate = 3000e3; %3280e3;%%ksps
-para.bw =3.746303561822511e9;  %2952.54e6;%1798.92e6;  %MHz
-para.chirploops= 2;
-para.adcsample = 256;%100;
-para.fps = 20;  %FPS
-para.startfreq =60.25e9; % 60.25;% GHz
-para.c = 3e8;   %299792458;
+para.freqslope =  
+para.samplerate = 
+para.bw =
+para.chirploops= 
+para.adcsample =
+para.fps =
+para.startfreq =
+para.c = 
 para.lambda = para.c/(para.bw/2 + para.startfreq); %meter
 para.rangereso = para.c/2/para.bw;
 para.rangemax = para.samplerate*para.c/2/para.freqslope;
@@ -63,7 +63,7 @@ end
 % ylabel('Distance')
 %% Background subtraction remove clutter
 rawdata_removed = zeros(size(raw_fft1d_4));
-alpha_clutter = 0.01;
+alpha_clutter = 
 for iii = 1
     for jj = 1+1:datalength
         rawdata_removed(iii,:,jj) = raw_fft1d_4(iii,:,jj)*alpha_clutter + (1-alpha_clutter )*rawdata_removed(iii,:,jj-1);
@@ -97,11 +97,11 @@ target.maxvarpoint_m = time_vector_m(target.maxvarpoint);
 %%
 Fs = 20;  % Sampling Frequency
 
-Fstop = 0.1;             % Stopband Frequency
-Fpass = 0.2;             % Passband Frequency
-Dstop = 0.1;          % Stopband Attenuation
-Dpass = 0.57501127785;  % Passband Ripple
-dens  = 20;              % Density Factor
+Fstop =              % Stopband Frequency
+Fpass =              % Passband Frequency
+Dstop =              % Stopband Attenuation
+Dpass =              % Passband Ripple
+dens  =              % Density Factor
 
 % Calculate the order from the parameters using FIRPMORD.
 [N, Fo, Ao, W] = firpmord([Fstop, Fpass]/(Fs/2), [0 1], [Dstop, Dpass]);
@@ -206,9 +206,8 @@ raw_br_phase_unw_dis = raw_br_phase_rmN;%*para.lambda/(4*pi);
 % figure;plot( raw_br_phase_unw_dis)
 
 %% IIR filter BR
-filtercoef = [1,0,-1,1,-1.850099942932254,0.868089891124046;...
-                   1,0,-1,1,-1.963154313093595,0.964395116008088];
-scaleVals = [0.115921965026776, 0.031242409616612,1];
+filtercoef = [];
+scaleVals = [];
 % filtercoef = [1,0,-1,1,-1.9632,0.9644;...
 %                    1,0,-1,1,-1.8501,0.8681];
 % scaleVals = [0.0602, 0.0602,1];
@@ -243,17 +242,11 @@ end
 % bw= 3.2;              % Hz -3 dB bandwidth
 % fs= 20;             % Hz sample frequency
 % [a,K]= biquad_bp(N,fcenter,bw,fs)
-% filtercoef_hr = [1.0000, 0, -1.0000, 1.0000, -0.5306, 0.5888;
-%                                                1.0000, 0, -1.0000, 1.0000,-0.665426915590254 , 0.209881546659129;
-%                                                1.0000, 0, -1.0000, 1.0000, -1.4991, 0.5887;
-%                                                1.0000, 0, -1.0000, 1.0000, -1.806869241597040,   0.868891038049929 ];
-% scaleVals_hr = [0.790800331926268, 0.518795485448221, 0.251741700442372, 0.221437880803871, 1.0000];
+% filtercoef_hr = [];
+% scaleVals_hr = [];
 
-filtercoef_hr = [1.0000, 0, -1.0000, 1.0000, -0.5306, 0.5888;
-                       1.0000, 0, -1.0000, 1.0000, -1.8069, 0.8689;
-                       1.0000, 0, -1.0000, 1.0000, -1.4991, 0.5887;
-                       1.0000, 0, -1.0000, 1.0000, -0.6654, 0.2099 ];
-scaleVals_hr = [0.4188, 0.4188, 0.3611, 0.3611, 1.0000];
+filtercoef_hr = [];
+scaleVals_hr = [];
 output_p_hr = zeros(4,3);
  raw_br_phase_unw_iir_hr = raw_br_phase_unw_dis;
 for ii =1:(length(raw_br_phase_unw))
