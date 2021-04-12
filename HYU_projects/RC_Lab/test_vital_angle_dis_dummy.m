@@ -1,13 +1,13 @@
 %% test vital _angle distance
 
-para.freqslope =  40.8450012207031251e6*1e6;%49.209e6*1e6; % % MHz/us
-para.samplerate = 3000e3; %3280e3;%%ksps
-para.bw =3.746303561822511e9;  %2952.54e6;%1798.92e6;  %MHz
-para.chirploops= 2;
-para.adcsample = 256;%100;
-para.fps = 20;  %FPS
-para.startfreq =60.25e9; % 60.25;% GHz
-para.c = 3e8;   %299792458;
+para.freqslope =  % MHz/us
+para.samplerate = %ksps
+para.bw = %MHz
+para.chirploops= 
+para.adcsample = %100;
+para.fps = %FPS
+para.startfreq = % 60.25;% GHz
+para.c = 
 para.lambda = para.c/(para.bw/2 + para.startfreq); %meter
 para.rangereso = para.c/2/para.bw;
 para.rangemax = para.samplerate*para.c/2/para.freqslope;
@@ -16,7 +16,7 @@ para.velocitymax = para.lambda/4/para.tc;
 para.velocityreso = para.lambda/2/para.tc/para.chirploops;
 
 Nfft = 2^nextpow2(1024);
-para.freqs = para.startfreq:para.freqslope:(para.startfreq+para.freqslope*(Nfft-1));
+para.freqs = para.startfreq:para.freqslope:();
 Ts = 1/Nfft/( para.bw/Nfft   +1e-16); %Avoid nan checks
 time_vector = 0:Ts:Ts*(Nfft-1);
 time_vector_m = time_vector *1.5e8/2/(Nfft/512);
@@ -74,11 +74,11 @@ target.maxvarpoint_m = time_vector_m(target.maxvarpoint);
 
 Fs = 20;  % Sampling Frequency
 
-Fstop = 0.1;             % Stopband Frequency
-Fpass = 0.2;             % Passband Frequency
-Dstop = 0.1;          % Stopband Attenuation
-Dpass = 0.57501127785;  % Passband Ripple
-dens  = 20;              % Density Factor
+Fstop =              % Stopband Frequency
+Fpass =              % Passband Frequency
+Dstop =              % Stopband Attenuation
+Dpass =              % Passband Ripple
+dens  =              % Density Factor
 
 % Calculate the order from the parameters using FIRPMORD.
 [N, Fo, Ao, W] = firpmord([Fstop, Fpass]/(Fs/2), [0 1], [Dstop, Dpass]);
@@ -88,8 +88,8 @@ RespHPF  = firpm(N, Fo, Ao, W, {dens});
 
 %% fdesign bandpass
 
-bandpassSpecs= fdesign.bandpass('Fst1,Fp1,Fp2,Fst2,Ast1,Ap,Ast2',0.01,0.1,0.5,0.6,2,1,2);
-bpFilter = design(bandpassSpecs,'butter','matchexactly','passband','SystemObject',true);
+bandpassSpecs= fdesign.bandpass();
+bpFilter = design();
 bpFilter.SOSMatrix;
 
 %% 
@@ -116,41 +116,27 @@ raw_br_phase_unw_dis = raw_br_phase_rmN;%*para.lambda/(4*pi);
 
 %% IIR filter BR
 
-filtercoef = [1,0,-1,1,-1.850099942932254,0.868089891124046;...
-                   1,0,-1,1,-1.963154313093595,0.964395116008088];
-scaleVals = [0.115921965026776, 0.031242409616612,1];
+filtercoef = [];
+scaleVals = [];
 
 output_p = zeros(2,3);
 
 raw_br_phase_unw_iir = zeros(size(raw_br_phase_unw_dis));
 for ii =1:(length(raw_br_phase_unw))
-    [raw_br_phase_unw_iir(ii),output_p] = filter_IIR_biquadCascade(...
-        raw_br_phase_unw_dis(ii), ...
-        filtercoef,...
-        scaleVals,...
-        output_p, ...
-        2 );
+    [raw_br_phase_unw_iir(ii),output_p] = filter_IIR_biquadCascade();
 end
 
 raw_br_phase_unw_iir_freq = fft(raw_br_phase_unw_iir,512);
 
 %% IIR filter HR
 
-filtercoef_hr = [1.0000, 0, -1.0000, 1.0000, -0.5306, 0.5888;
-                       1.0000, 0, -1.0000, 1.0000, -1.8069, 0.8689;
-                       1.0000, 0, -1.0000, 1.0000, -1.4991, 0.5887;
-                       1.0000, 0, -1.0000, 1.0000, -0.6654, 0.2099 ];
-scaleVals_hr = [0.4188, 0.4188, 0.3611, 0.3611, 1.0000];
+filtercoef_hr = [];
+scaleVals_hr = [];
 output_p_hr = zeros(4,3);
 raw_br_phase_unw_iir_hr = raw_br_phase_unw_dis;
 
 for ii =1:(length(raw_br_phase_unw))
-    [raw_br_phase_unw_iir_hr(ii),output_p_hr] = filter_IIR_biquadCascade(...
-        raw_br_phase_unw_dis(ii), ...
-        filtercoef_hr,...
-        scaleVals_hr,...
-        output_p_hr, ...
-        4 );
+    [raw_br_phase_unw_iir_hr(ii),output_p_hr] = filter_IIR_biquadCascade();
 end
 
 raw_br_phase_unw_iir_hr_freq = fft(raw_br_phase_unw_iir_hr,512);
@@ -209,8 +195,7 @@ ftype = 'bandpass';
 %%
 % raw_br_phase_unw_iir_rmN = raw_br_phase_unw_iir;
 % for ii =5:length(raw_br_phase_unw_iir)
-%    raw_br_phase_unw_iir_rmN(ii)  = filter_removeImpluseNoise2(raw_br_phase_unw(ii-2),...
-%                                                                             raw_br_phase_unw(ii-1), raw_br_phase_unw(ii), 0.4 );
+%    raw_br_phase_unw_iir_rmN(ii)  = filter_removeImpluseNoise2();
 % end
 % 
 
